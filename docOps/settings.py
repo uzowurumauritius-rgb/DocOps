@@ -10,22 +10,86 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import environ
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+# INPUT:
+#   - The file Django is currently running (settings.py)
+#
+# PROCESS:
+#   - Find the real, full location of this file on the computer
+#   - Move up two folders to reach the main project directory
+#
+
+# OUTPUT:
+#   - BASE_DIR now represents the project’s root folder
+#   - Used as a reliable reference point for configs, .env, and files
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# INPUT:
+#   - () Operating system environment variables
+#
+# PROCESS:
+#   - environ.Env() initializes the environment reader object
+#   - This object is responsible for fetching values from the OS environment
+#
+# OUTPUT:
+#   - `env` , stores the environment reader object
+env = environ.Env()
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-1q+zay2bdwi6^41)p_jop1psprfg9bj$bn5j-gtj48)o!c3wnn"
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# INPUT:
+#   - Project root directory (BASE_DIR)
+#   - .env file containing environment variables
+#
+# PROCESS:
+#   - read_env() reads key-value pairs from the .env file
+#   - Loads them into the OS environment for Django to access
+#
+# OUTPUT:
+#   - Environment variables become available to settings.py via `env`
+environ.Env.read_env(BASE_DIR / ".env")
 
-ALLOWED_HOSTS = []
+
+# INPUT:
+#   - Environment variable "DJANGO_DEBUG"
+#
+# PROCESS:
+#   - env.bool() reads the value from the environment
+#   - Converts it into a True / False boolean
+#   - Defaults to False for safety if missing
+#
+# OUTPUT:
+#   - DEBUG controls development vs production behavior
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
+
+
+
+# INPUT:
+#   - Environment variable "DJANGO_SECRET_KEY"
+#
+# PROCESS:
+#   - env() fetches the value directly from the environment
+#   - No default provided to force explicit configuration
+#
+# OUTPUT:
+#   - SECRET_KEY secures sessions, tokens, and cryptographic signing
+SECRET_KEY = env("DJANGO_SECRET_KEY")
+
+
+
+# INPUT:
+#   - Environment variable "DJANGO_ALLOWED_HOSTS"
+#
+# PROCESS:
+#   - env.list() splits the comma-separated string into a Python list
+#
+# OUTPUT:
+#   - ALLOWED_HOSTS defines which domains can access the app
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
+
 
 
 # Application definition
@@ -37,6 +101,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third-party apps
+    "rest_framework",
+    "rest_framework_simplejwt",
+    # Local apps
+    "core",
 ]
 
 MIDDLEWARE = [
@@ -69,15 +138,26 @@ TEMPLATES = [
 WSGI_APPLICATION = "docOps.wsgi.application"
 
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
+# INPUT:
+#   - Database connection variables from the environment
+#
+# PROCESS:
+#   - env() reads each required value
+#   - Django assembles them into a Postgres connection config
+#
+# OUTPUT:
+#   - DATABASES config is fully environment-driven
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("DB_NAME"),
+        "USER": env("DB_USER"),
+        "PASSWORD": env("DB_PASSWORD"),
+        "HOST": env("DB_HOST"),
+        "PORT": env("DB_PORT"),
     }
 }
+
 
 
 # Password validation
